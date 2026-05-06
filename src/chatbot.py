@@ -25,6 +25,7 @@ from src.llm.llm_interface import generate_response, FALLBACK_RESPONSE
 from src.memory.memory import memory
 from src.utils.logger import log_query_event
 from src.utils.query_rewriter import rewrite_query
+from src.preprocessing.conversation_handler import GreetingPreprocessor
 
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,8 @@ class ChatbotEngine:
         similarity_threshold: float | None = None,
     ):
         self.top_k = top_k or settings.TOP_K_CHUNKS
+
+        self.greeting_preprocessor = GreetingPreprocessor()
 
         self.similarity_threshold = (
             similarity_threshold
@@ -71,6 +74,16 @@ class ChatbotEngine:
             raise TypeError("query must be a string")
 
         query = query.strip()
+
+        preprocessed = self.greeting_preprocessor.process(query)
+
+        #Conversational shortcut
+
+        if preprocessed.is_greeting_only:
+            logger.info(f"[{CHATBOT_COMPONENT}] Conversational shortcut response returned")
+            return preprocessed.greeting_response
+        
+        query = preprocessed.cleaned_query
 
         if not query:
             raise ValueError("query cannot be empty")

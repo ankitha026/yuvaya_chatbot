@@ -80,7 +80,9 @@ class ConversationMemory:
                 except Exception:
                     logger.warning(f"[Memory] Redis not ready, retrying...({attempt+1}/5)")
                     time.sleep(2)
-            raise Exception("Redis connection failed after multiple attempts.")
+            logger.warning("[Memory] Redis connection failed after multiple attempts.")
+            
+            self.redis_client = None
                     
 
         except Exception as exc:

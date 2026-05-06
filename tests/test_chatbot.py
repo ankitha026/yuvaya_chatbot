@@ -881,6 +881,162 @@ def test_error_handling():
 
     run_test("Numeric-only query handled gracefully by keyword retriever", _numeric)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# CONVERSATION PREPROCESSOR TESTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_greeting_preprocessor():
+    print(_head("Conversation Preprocessor"))
+
+    from src.preprocessing.conversation_handler import GreetingPreprocessor
+
+    processor = GreetingPreprocessor()
+
+    # ─────────────────────────────────────────────
+    # Greeting only
+    # ─────────────────────────────────────────────
+    def _greeting_only():
+        r = processor.process("hi")
+
+        assert r.is_greeting_only is True
+        assert r.cleaned_query is None
+        assert isinstance(r.greeting_response, str)
+
+    run_test(
+        "Greeting-only input bypasses pipeline",
+        _greeting_only,
+    )
+
+    # ─────────────────────────────────────────────
+    # Greeting + query
+    # ─────────────────────────────────────────────
+    def _greeting_query():
+        r = processor.process(
+            "hello show me collagen products"
+        )
+
+        assert r.is_greeting_only is False
+        assert (
+            r.cleaned_query
+            == "show me collagen products"
+        )
+
+    run_test(
+        "Greeting stripped from mixed query",
+        _greeting_query,
+    )
+
+    # ─────────────────────────────────────────────
+    # Normal query
+    # ─────────────────────────────────────────────
+    def _normal_query():
+        r = processor.process(
+            "show me collagen products"
+        )
+
+        assert r.is_greeting_only is False
+        assert (
+            r.cleaned_query
+            == "show me collagen products"
+        )
+
+    run_test(
+        "Normal query remains unchanged",
+        _normal_query,
+    )
+
+    # ─────────────────────────────────────────────
+    # Repeated greeting variants
+    # ─────────────────────────────────────────────
+    def _variants():
+        r = processor.process(
+            "heyyyy show products"
+        )
+
+        assert r.cleaned_query == "show products"
+
+    run_test(
+        "Repeated greeting variants handled",
+        _variants,
+    )
+
+    # ─────────────────────────────────────────────
+    # Avoid false positives
+    # ─────────────────────────────────────────────
+    def _false_positive():
+        r = processor.process(
+            "can you say hello in spanish"
+        )
+
+        assert (
+            r.cleaned_query
+            == "can you say hello in spanish"
+        )
+
+    run_test(
+        "Greeting words inside query are NOT stripped",
+        _false_positive,
+    )
+
+    # ─────────────────────────────────────────────
+    # Thanks-only
+    # ─────────────────────────────────────────────
+    def _thanks():
+        r = processor.process("thanks")
+
+        assert r.is_greeting_only is True
+        assert isinstance(r.greeting_response, str)
+
+    run_test(
+        "Thanks-only message bypasses pipeline",
+        _thanks,
+    )
+
+    # ─────────────────────────────────────────────
+    # Goodbye-only
+    # ─────────────────────────────────────────────
+    def _goodbye():
+        r = processor.process("bye")
+
+        assert r.is_greeting_only is True
+        assert isinstance(r.greeting_response, str)
+
+    run_test(
+        "Goodbye-only message bypasses pipeline",
+        _goodbye,
+    )
+
+    # ─────────────────────────────────────────────
+    # Acknowledgement-only
+    # ─────────────────────────────────────────────
+    def _ack():
+        r = processor.process("okay")
+
+        assert r.is_greeting_only is True
+        assert isinstance(r.greeting_response, str)
+
+    run_test(
+        "Acknowledgement-only message bypasses pipeline",
+        _ack,
+    )
+
+    # ─────────────────────────────────────────────
+    # Greeting with punctuation
+    # ─────────────────────────────────────────────
+    def _greeting_punctuation():
+        r = processor.process(
+            "hello!!! show collagen benefits"
+        )
+
+        assert (
+            r.cleaned_query
+            == "show collagen benefits"
+        )
+
+    run_test(
+        "Greeting with punctuation handled",
+        _greeting_punctuation,
+    )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN ORCHESTRATOR
@@ -922,6 +1078,7 @@ def main():
 
     # ── Run all test stages ──────────────────────────────────────────────────
     test_knowledge_base()
+    test_greeting_preprocessor()
     test_query_rewriter()
     test_keyword_retriever()
     test_embedding_retriever()
@@ -932,6 +1089,7 @@ def main():
     test_chatbot_engine_live()
     test_chatbot_multi_turn()
     test_error_handling()
+
 
     total_elapsed = round(time.perf_counter() - total_start, 2)
     print(f"\n  {CYAN}Total test time: {total_elapsed}s{RESET}")

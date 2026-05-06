@@ -2,9 +2,7 @@ version: "3.9"
 
 services:
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image : ankitha2604/collagreens-chatbot:latest
     container_name: collagreens-chatbot-api
     ports:
       - "8000:8000"
